@@ -16,5 +16,6 @@
 *.exe
 *.out
 *.app
-/src/
-!/src/*.c
+
+/src/ps_signals/math_test
+/src/ps_signals/signal
