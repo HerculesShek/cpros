@@ -4,7 +4,28 @@
 #include <string.h>
 #include <errno.h>
 #include <arpa/inet.h>
+#include <unistd.h>
+#include <signal.h>
 
+int listener_d;
+
+void handle_shutdown(int sig)
+{
+  if(listener_d)
+	close(listener_d);
+
+  fprintf(stderr, "\nBye!\n");
+  exit(0);
+}
+
+int catch_signal(int sig, void (*handler)(int))
+{
+  struct sigaction action;
+  action.sa_handler = handler;
+  sigemptyset(&action.sa_mask);
+  action.sa_flags = 0;
+  return sigaction(sig, &action, NULL);
+}
 
 void errnoexit(char *msg)
 {
@@ -15,14 +36,6 @@ void error(char *msg)
   errnoexit(msg);
   exit(1);
 }
-
-char *advice[] = {
-  "Take smaller bites\r\n",
-  "Go for the tight jeans. No they do NOT make you look fat.\r\n", 
-  "One word: inappropriate\r\n",
-  "Just for today, be honest. Tell your boss what you *really* think\r\n", 
-  "You might want to rethink that haircut\r\n"
-};
 
 int open_listener_socket()
 {
@@ -75,27 +88,44 @@ int read_in(int socket, char *buf, int len)
 
 int main()
 {
+  if(catch_signal(SIGINT, handle_shutdown)==-1)
+	error("Can't set the interrupt handler");
 
-  int listener_d = open_listener_socket();
-
+  listener_d = open_listener_socket();
   bind_to_port(listener_d, 30000);
-
   if(listen(listener_d, 10) == -1)
 	error("Can't listen");
   puts("Waiting for connection");
 
   struct sockaddr_storage client_addr;
   unsigned int address_size = sizeof(client_addr);
+  char buf[255];
   while(1){
 	int connect_d = accept(listener_d, (struct sockaddr *) &client_addr, &address_size);
 	if(connect_d == -1)
 	  error("Can't open secondary socket");
-
-	char *msg = advice[rand() % 5];
-    say(connect_d, msg);
-
+	if(!fork()){
+	  close(listener_d);
+	  if(say(connect_d, 
+			 "Internet Knock-Knock Protocol Server\r\nVersion 1.0\r\nKnock! Knock!\r\n>") != -1){
+		read_in(connect_d, buf, sizeof(buf));
+		if (strncasecmp("Who's there?", buf, 12)){
+		  say(connect_d,  "You should say ‘Who’s there?’!\n");
+		}
+		else{
+		  if (say(connect_d, "Oscar\r\n>") != -1) {
+			read_in(connect_d, buf, sizeof(buf));
+			if (strncasecmp("Oscar who?", buf, 10))
+			  say(connect_d, "You should say ‘Oscar who?’!\r\n");
+			else
+			  say(connect_d, "Oscar silly question, you get a silly answer\r\n");
+		  }
+		}
+	  }
+	  close(connect_d);
+	  exit(0);
+	}
 	close(connect_d);
   }
-
   return 0;
-} 
+}
