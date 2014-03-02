@@ -19,3 +19,5 @@
 
 /src/ps_signals/math_test
 /src/ps_signals/signal
+
+/src/networking/socket
