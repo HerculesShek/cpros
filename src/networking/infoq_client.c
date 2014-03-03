@@ -56,7 +56,6 @@ int main(int argc, char *argv[])
   char rec[256];
   int bytesRcvd = recv(d_sock, rec, 255, 0);
   while(bytesRcvd){
-
 	if(bytesRcvd == -1)
 	  error("Can't read from server");
 	rec[bytesRcvd] = '\0';
