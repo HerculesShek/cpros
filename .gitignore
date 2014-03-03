@@ -22,3 +22,5 @@
 
 /src/networking/socket
 /src/networking/ikkp_server
+/src/networking/infoq_client
+
